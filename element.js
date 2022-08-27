@@ -56,6 +56,9 @@
   const __EVENTNAME_DIALOG_STATE__ = "colordialogstate";
   const __EVENTNAME_COLORDRAG__ = "colordrag";
   const __EVENTNAME_COLORMATCH__ = "colormatch";
+  const __EVENTNAME_STORECOLORS__ = "storecolors";
+  const __EVENTNAME_READCOLORS__ = "readcolors";
+  const __EVENTNAME_SORT__ = "sort";
   //! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   const __CSS_SEARCH_NOMATCH__ = `opacity:.3;display:none;`;
@@ -409,28 +412,6 @@
         `lavender,pink,violet,orchid,mediumorchid,mediumvioletred,purple,` +
         `lavenderblush,lightpink,hotpink,palevioletred,deeppink,crimson,darkmagenta`
       );
-      return (
-        `white,gainsboro,silver,darkgray,gray,dimgray,black,` +
-        `whitesmoke,lightgray,lightcoral,rosybrown,indianred,red,maroon,` +
-        `snow,mistyrose,salmon,orangered,chocolate,brown,darkred,` +
-        `seashell,peachpuff,tomato,darkorange,peru,firebrick,olive,` +
-        `linen,bisque,darksalmon,orange,goldenrod,sienna,darkolivegreen,` +
-        `oldlace,antiquewhite,coral,gold,limegreen,saddlebrown,darkgreen,` +
-        `floralwhite,navajowhite,lightsalmon,darkkhaki,lime,darkgoldenrod,green,` +
-        `cornsilk,blanchedalmond,sandybrown,yellow,mediumseagreen,olivedrab,forestgreen,` +
-        `ivory,papayawhip,burlywood,yellowgreen,springgreen,seagreen,darkslategray,` +
-        `beige,moccasin,tan,chartreuse,mediumspringgreen,lightseagreen,teal,` +
-        `lightyellow,wheat,khaki,lawngreen,aqua,darkturquoise,darkcyan,` +
-        `lightgoldenrodyellow,lemonchiffon,greenyellow,darkseagreen,cyan,deepskyblue,midnightblue,` +
-        `honeydew,palegoldenrod,lightgreen,mediumaquamarine,cadetblue,steelblue,navy,` +
-        `mintcream,palegreen,skyblue,turquoise,dodgerblue,blue,darkblue,` +
-        `azure,aquamarine,lightskyblue,mediumturquoise,lightslategray,blueviolet,mediumblue,` +
-        `lightcyan,paleturquoise,lightsteelblue,cornflowerblue,slategray,darkorchid,darkslateblue,` +
-        `aliceblue,powderblue,thistle,mediumslateblue,royalblue,fuchsia,indigo,` +
-        `ghostwhite,lightblue,plum,mediumpurple,slateblue,magenta,darkviolet,` +
-        `lavender,pink,violet,orchid,mediumorchid,mediumvioletred,purple,` +
-        `lavenderblush,lightpink,hotpink,palevioletred,deeppink,crimson,darkmagenta`
-      );
     }
     // ========================================================BaseClass.rgb2hex
     rgb2hex(colorRGBString) {
@@ -599,6 +580,7 @@
         this.initdrag = () => {}; //! overload initdrag, so it runs only once
 
         this.setAttribute("draggable", true);
+
         const /* function */ dispatch = (detail) =>
             this.$dispatch({ name: __EVENTNAME_COLORDRAG__, detail });
 
@@ -617,6 +599,7 @@
             });
           },
           ondragend: (evt) => {
+            //! endrag handled by <grid>event_colordrag
             dispatch({
               dragover: undefined,
             });
@@ -643,8 +626,7 @@
         this.render();
       } //connectedCallback
       // ======================================================== <HCP-color-grid>.render
-      render() {
-        let colors = this.getAttribute("colors") || BaseClass.colors;
+      render(colors = this.getAttribute("colors") || BaseClass.colors) {
         this.elements = colors.split`,`
           .slice(0, 140)
           .map((colordef) => colordef.split`:`)
@@ -667,6 +649,15 @@
             })
           );
         this.replaceChildren(...this.elements);
+      }
+      // ======================================================== <HCP-color-grid>.event_readcolors
+      event_readcolors(evt) {
+        let colors = localStorage.getItem("color-dialog").split(",");
+        //! this.render(colors); will disconnect existing colors
+        console.log(`666 Read colors`, colors.slice(0, 5));
+        this.elements.map((el, idx) => {
+          el.order = colors.indexOf(el.id);
+        });
       }
       // ======================================================== <HCP-color-grid>.orderDiagonal
       orderDiagonal() {
@@ -692,8 +683,24 @@
             //return element;
           });
 
+        this.setAttribute("sort", sortOrder);
+        this.sortOrder = sortOrder;
+        localStorage.setItem(__ELEMENT_APP__ + "_sortOrder", sortOrder);
+
         log(`${this.nodeName} sorted:%c ${sortOrder}`, "background:gold");
       } // render
+      // ======================================================== <HCP-color-grid>.event_sort
+      event_sort(evt) {
+        let sortOrder = evt.detail.replace(__EVENTNAME_SORT__, ""); // strip from "sortindex" , now is "index"
+        log(this.nodeName + " sorting", sortOrder);
+        this.sort(sortOrder);
+        if (sortOrder != "index" && sortOrder != "user1") {
+          this.orderDiagonal();
+        }
+        if (sortOrder === "user1") {
+          this.$emit(__EVENTNAME_READCOLORS__);
+        }
+      }
       // ======================================================== <HCP-color-grid>.event_colormatch
       event_colormatch(evt) {
         this.toggleAttribute("namematch", false);
@@ -702,31 +709,28 @@
       event_namematch(evt) {
         this.toggleAttribute("namematch", evt.detail);
       }
-      // ======================================================== <HCP-color-grid>.event_sort
-      event_sort(evt) {
-        let sortOrder = evt.detail.replace("sort", ""); // strip from "sortindex"
-        log(this.nodeName + " sorting", sortOrder);
-        this.sort(sortOrder);
-        if (sortOrder != "index") {
-          this.orderDiagonal();
-        }
-      }
       // ======================================================== <HCP-color-grid>.event_colordrag
       event_colordrag(evt) {
-        let { dragcolor, dragover } = evt.detail;
-        if (dragcolor) {
-          // start dragging
-          this.drag.color = dragcolor;
-        } else {
-          if (dragover) {
-            // dragging over another color
-            this.drag.over = dragover;
+        if (this.sortOrder == "user1") {
+          let { dragcolor, dragover } = evt.detail;
+          if (dragcolor) {
+            // start dragging
+            this.drag.color = dragcolor;
           } else {
-            // end drag
-            this.drag.color.swapwith(this.drag.over);
-            this.drag = {};
-            this.$emit("storecolors");
+            if (dragover) {
+              // dragging over another color
+              this.drag.over = dragover;
+            } else {
+              // end drag
+              this.drag.color.swapwith(this.drag.over);
+              this.drag = {};
+              this.$emit(__EVENTNAME_STORECOLORS__);
+            }
           }
+        } else {
+          alert(
+            "Order can only be changed in the (first icon) 'user' sortOrder view"
+          );
         }
       } // event_colordrag
     }
@@ -783,7 +787,7 @@
           tag: "select",
           onchange: (evt) => {
             this.$dispatch({
-              name: "sort",
+              name: __EVENTNAME_SORT__,
               detail: evt.target.value,
             });
           },
@@ -807,7 +811,7 @@
             styles: {},
             innerHTML: this.$elementHTML({
               tag: __ELEMENT_TEXT__,
-              html: `&nbsp;<b> An experiment in Event driven Web Components</b> - Click or Drag colors`,
+              html: `&nbsp;<b> WIP - An experiment in Event driven Web Components</b> - Click or Drag colors`,
             }),
           })
         ); // append
@@ -954,7 +958,7 @@
           elementColors[__COLOR_distanceLab__] = Lab.toFixed(2);
         });
 
-        this.$emit("sort", sortDistance); // multiple components are listening
+        //this.$emit(__EVENTNAME_SORT__, sortDistance); // multiple components are listening
         this.$emit("borderColor", hexcolor);
       }
       // ======================================================== < app >.event_sort
@@ -994,11 +998,12 @@
         return [...this.shadowRoot.querySelectorAll(__ELEMENT_COLOR__)];
       }
       get colornames() {
-        return this.colors.map((col) => col.colors.name).join(",");
-      }
-      // ======================================================== < app >.listnames
-      listnames() {
-        console.log(this.colornames);
+        // the colors are sorted by CSS order, not by index
+        let color_elements = this.colors;
+        return color_elements.reduce((orderednames, el) => {
+          orderednames[el.order] = el.colors.name;
+          return orderednames;
+        }, Array(color_elements.length));
       }
       // ======================================================== < app >.event_namematch
       event_namematch(evt) {
@@ -1038,17 +1043,15 @@
       }
       // ======================================================== < app >.event_storecolors
       event_storecolors(evt) {
-        localStorage.setItem("color-dialog", this.colornames);
+        setTimeout(() => {
+          let colors = this.colornames;
+          console.log("666 Store colors", colors.slice(0, 5));
+          localStorage.setItem("color-dialog", colors);
+        }, 100);
       }
       // ======================================================== < app >.event_readcolors
       event_readcolors(evt) {
-        let colors = localStorage.getItem("color-dialog");
-
-        todo(
-          `Implement reading colors from localStorage("color-dialog")`,
-          evt.type,
-          evt.target.nodeName
-        );
+        log("APP event_readcolors", evt.detail);
       }
       // ======================================================== < app >.event_click
       event_click(evt) {
@@ -1065,12 +1068,23 @@
           // wait till all innerHTML is parsed
           //! needs initial <HCP-colors> to be rendered
           let color = "#F68222";
-          color = "red";
-          this.$emit(__EVENTNAME_COLORMATCH__, color);
-          this.$emit("storecolors");
-          this.$emit("readcolors");
+          color = "purple";
+
           // this.$emit("setnamematch", "dark");
-          // this.$emit("sort", "index");
+          // this.$emit(__EVENTNAME_SORT__, "index");
+
+          //! The icons arenot yet in the DOM, so we need to wait for them to be rendered
+          setTimeout(() => {
+            this.$emit(__EVENTNAME_COLORMATCH__, color);
+            setTimeout(() => {
+              this.$emit(
+                __EVENTNAME_SORT__,
+                localStorage.getItem(__ELEMENT_APP__ + "_sortOrder") ||
+                  "contrast"
+              );
+            }, 1000);
+          }, 0);
+
           // todo get contrastvalue for color
           log(
             `${this.nodeName} %c ${color}`,
@@ -1180,8 +1194,8 @@
         //! $notation marks the event listener to listen on this element only, not at the (document) eventbus
         // ======================================================== <HCP-svg-icon>.event_$click
         event_$click(evt) {
-          if (this.sort.startsWith("sort")) {
-            this.$emit("sort", this.sort);
+          if (this.sort.startsWith(__EVENTNAME_SORT__)) {
+            this.$emit(__EVENTNAME_SORT__, this.sort);
           } else if (this[this.sort]) {
             this[this.sort].apply(this);
           }

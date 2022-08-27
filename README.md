@@ -1,2 +1,2 @@
-# html-color-picker.github.io
-&lt;html-color-picker> Web Component
+# &lt;html-color-picker> Web Component
+

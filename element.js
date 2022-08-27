@@ -35,6 +35,7 @@
   ];
   const __EVENTBASENAME__ = "🎨";
   const __ELEMENT_APP__ = "html-color-picker";
+  const __ELEMENT_TEXT__ = __ELEMENT_APP__ + "-text";
   const __ELEMENT_HEADER__ = __ELEMENT_APP__ + "-header";
   const __ELEMENT_COLOR__ = __ELEMENT_APP__ + "-color";
   const __ELEMENT_LABEL__ = __ELEMENT_APP__ + "-label";
@@ -56,6 +57,8 @@
   const __EVENTNAME_COLORDRAG__ = "colordrag";
   const __EVENTNAME_COLORMATCH__ = "colormatch";
   //! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  const __CSS_SEARCH_NOMATCH__ = `opacity:.3;display:none;`;
 
   // ********************************************************** log function
   function log(...args) {
@@ -155,9 +158,7 @@
       classes = [],
       events = {}, // standard eventlisteners attached to element
       listeners = {}, // custom eventlisteners attached to element, when added to the DOM
-      customevents = {
-        eventname: {},
-      }, // custom eventlisteners attached to element
+      customevents = {}, // custom eventlisteners attached to element
       prepend = [], // element.prepend(...prepend)
       html, // element.innerHTML
       append = [], // element.append(...append)
@@ -186,9 +187,18 @@
         .map(([key, value]) => element.setAttribute(key, value));
 
       // apply styles
-      Object.entries(styles).map(
-        ([key, value]) => (element.style[key] = value)
-      );
+      Object.entries(styles).map(([key, value]) => {
+        element.style[key] = value;
+      });
+      // apply customevents
+      Object.entries(customevents).map(([name, handler]) => {
+        console.log(name, handler, this);
+        this.$listen({
+          name,
+          handler: handler.bind(element), // bind element scope to handler
+          eventbus: document,
+        });
+      });
 
       // add listener to remove all eventlisteners on element
       element.addEventListener(
@@ -791,17 +801,14 @@
           //this.selectElement,
           "search:",
           this.inputElement,
+
           this.$element({
             tag: "span",
             styles: {},
-            innerHTML:
-              "&nbsp;<b> An experiment in Event driven Web Components</b> - Click or Drag colors",
-            events: {
-              onmouseenter: (evt) => {
-                log("title", evt.detail, this);
-              },
-            },
-            listeners: {},
+            innerHTML: this.$elementHTML({
+              tag: __ELEMENT_TEXT__,
+              html: `&nbsp;<b> An experiment in Event driven Web Components</b> - Click or Drag colors`,
+            }),
           })
         ); // append
       } // render
@@ -814,8 +821,7 @@
     class extends BaseClass {
       // ======================================================== < app >.constructor
       constructor() {
-        super().attachShadow({ mode: "open" }).innerHTML =
-          /* html  */ `<style>` +
+        const styleApplication =
           // dialog
           /* css  */ `dialog{--fontsize:1.6vh;max-width:100vw;max-height:100vh}` +
           /* css  */ `dialog{font:var(--fontsize) arial}` +
@@ -834,18 +840,17 @@
           // matching typed colorname
           /* css  */ `.namematched{zoom:1.0}` +
           // dim all HCP-colors when searching for a namematch
-          /* css  */ `${__ELEMENT_COLOR_GRID__}[namematch] ${__ELEMENT_COLOR__}:not(.namematched){` +
-          /* css  */ `opacity:.3;` +
-          /* css  */ `display:none;` +
-          /* css  */ `}` +
+          /* css  */ `${__ELEMENT_COLOR_GRID__}[namematch] ${__ELEMENT_COLOR__}:not(.namematched){${__CSS_SEARCH_NOMATCH__}}` +
           // footer
           ///* css  */ `dialog::after{content:"CSS can't respond to Event to change color like the icons do";background:purple;color:beige;font-size:70%;position:fixed;}` +
           // toolbar //
           /* css  */ `${__ELEMENT_TOOLBAR__}{display:flex;gap:5px;justify-content:space-evenly;width:100%;height:30px;cursor:pointer;}` +
           // size toolbar buttons //
           /* css  */ `${__ELEMENT_ICON__}{width:24px;height:24px}` +
-          /* css  */ `${__ELEMENT_HEADER__}{display:grid;grid:1fr/250px 1fr 50px;background:var(--borderColor,beige)}` +
-          `</style>` +
+          /* css  */ `${__ELEMENT_HEADER__}{display:grid;grid:1fr/250px 1fr 50px;background:var(--borderColor,beige)}`;
+        super().attachShadow({ mode: "open" }).innerHTML =
+          `<style>${styleApplication}</style>` +
+          /* javascript */
           this.$elementHTML({
             tag: "dialog", // standard HTML <dialog>
             html:
@@ -945,7 +950,6 @@
           let { index, colorname, hex, hexint } = elementColors;
           let rgb = colorDistanceRGB(ensureHexcolor(hex));
           let Lab = colorDistanceLab(ensureHexcolor(hex));
-          //console.log(index, colorname, rgb, Lab,elementColors.hex, elementColors);
           elementColors[__COLOR_distanceRGB__] = rgb.toFixed(2);
           elementColors[__COLOR_distanceLab__] = Lab.toFixed(2);
         });
@@ -1004,7 +1008,7 @@
       // ======================================================== < app >.event_borderColor
       event_borderColor(evt) {
         let borderColor = evt.detail;
-        let borderFontColor = "beige";
+        let borderFontColor = this.contrastColor(borderColor);
         if (typeof borderColor == "object") {
           borderColor = evt.detail.hex;
           borderFontColor = evt.detail.contrast;
@@ -1017,7 +1021,7 @@
             this.style.setProperty("--" + name, color);
           };
         setCSSpropertyColor("borderColor", borderColor);
-        //setCSSpropertyColor("borderFontColor", borderFontColor);
+        setCSSpropertyColor("borderFontColor", borderFontColor);
         // if a DOM reference, gets its contrast color
       }
       // ======================================================== < app >.event_colormatch
@@ -1078,6 +1082,25 @@
       } // end connectedCallback < app >
     } // end class < app >
   ); // end define < app >
+  // ********************************************************** <HCP-text>
+  customElements.define(
+    __ELEMENT_TEXT__,
+    class extends BaseClass {
+      // ======================================================== <HCP-toolbar>.event_borderColor
+      event_borderColor(evt) {
+        //! color of text set by CSS property
+        // log(666,this.nodeName, "Event: borderColor", evt.detail);
+        // this.style.color = this.contrastColor(
+        //   typeof evt.detail == "object" ? evt.detail.hex : evt.detail
+        // );
+      }
+      // ======================================================== <HCP-toolbar>.connectedCallback
+      connectedCallback() {
+        super.connectedCallback();
+      }
+    }
+  );
+
   // ********************************************************** <HCP-toolbar>
   customElements.define(
     __ELEMENT_TOOLBAR__,

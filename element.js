@@ -33,8 +33,8 @@
     133, 127, 121, 115, 109, 103, 97, 134, 128, 122, 116, 110, 104, 135, 129,
     123, 117, 111, 136, 130, 124, 118, 137, 131, 125, 138, 132, 139,
   ];
-  const __EVENTNAME__ = "🎨";
-  const __ELEMENT_APP__ = "color-dialog";
+  const __EVENTBASENAME__ = "🎨";
+  const __ELEMENT_APP__ = "html-color-picker";
   const __ELEMENT_HEADER__ = __ELEMENT_APP__ + "-header";
   const __ELEMENT_COLOR__ = __ELEMENT_APP__ + "-color";
   const __ELEMENT_LABEL__ = __ELEMENT_APP__ + "-label";
@@ -50,7 +50,12 @@
 
   const __APP_COLOR__ = "rebeccapurple";
 
-  const __EVENT_COLOR_DRAG = "colordrag";
+  //! vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  //! Event names matching "event_name" methods on Elements!
+  const __EVENTNAME_DIALOG_STATE__ = "colordialogstate";
+  const __EVENTNAME_COLORDRAG__ = "colordrag";
+  const __EVENTNAME_COLORMATCH__ = "colormatch";
+  //! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   // ********************************************************** log function
   function log(...args) {
@@ -60,6 +65,9 @@
       `background:${__APP_COLOR__};color:gold`,
       ...args
     );
+  }
+  function todo() {
+    console.warn(`%c todo:`, "background:gold;color:black", ...arguments);
   }
   function ensureHexcolor(color) {
     return ("#" + color).replace("##", "#");
@@ -112,9 +120,9 @@
   }
 
   let colorSpiralOrder = spiralMatrixTraversal(createMatrixArray(7, 20));
-  // ********************************************************** ACME_BaseElement
-  class ACME_BaseElement extends HTMLElement {
-    // ======================================================== ACME_BaseElement.$query
+  // ********************************************************** ACME_BaseClass
+  class ACME_BaseClass extends HTMLElement {
+    // ======================================================== ACME_BaseClass.$query
     $query(
       // selector is a DOM selector string eg. "div:not[id='1']"
       // if starts with * then return all elements as NodeList
@@ -131,7 +139,7 @@
         }
       } else return root.querySelector(selector);
     }
-    // ======================================================== ACME_BaseElement.$elementHTML
+    // ======================================================== ACME_BaseClass.$elementHTML
     $elementHTML({
       tag = "div", // HTML tag name
       html = "",
@@ -139,13 +147,14 @@
     }) {
       return `<${tag} ${attrs}>${html}</${tag}>`;
     }
-    // ======================================================== ACME_BaseElement.$element
+    // ======================================================== ACME_BaseClass.$element
     $element({
       tag = "div", // HTML tag name "div", if start with * or ** call $query to get element
       props = {}, // properties (and eventlisteners) attached to element
       attrs = [], // attributes attached to element
       classes = [],
       events = {}, // standard eventlisteners attached to element
+      listeners = {}, // custom eventlisteners attached to element, when added to the DOM
       customevents = {
         eventname: {},
       }, // custom eventlisteners attached to element
@@ -156,6 +165,7 @@
       element = tag.charAt(0) === "*"
         ? this.$query(tag) // do not create a new tag, find existing element
         : document.createElement(tag), // else create a new tag
+      styles = {},
       //stuff any other properties into moreprops variable
       ...moreprops
     }) {
@@ -175,6 +185,11 @@
       ) // else proces as Object
         .map(([key, value]) => element.setAttribute(key, value));
 
+      // apply styles
+      Object.entries(styles).map(
+        ([key, value]) => (element.style[key] = value)
+      );
+
       // add listener to remove all eventlisteners on element
       element.addEventListener(
         new CustomEvent("removeEventListeners"),
@@ -184,15 +199,15 @@
       );
       return element;
     }
-    // ======================================================== ACME_BaseElement.disconnectedCallback
+    // ======================================================== ACME_BaseClass.disconnectedCallback
     disconnectedCallback() {
       console.warn("" + this.tagName + " disconnected");
     }
-    // ======================================================== ACME_BaseElement.eventbus
+    // ======================================================== ACME_BaseClass.eventbus
     get eventbus() {
       return this.__eventbus__ || document;
     }
-    // ======================================================== ACME_BaseElement.connectedCallback
+    // ======================================================== ACME_BaseClass.connectedCallback
     connectedCallback(...args) {
       let scope = this;
       //! register all methods starting with event_ as $listener
@@ -238,7 +253,7 @@
       //if (scope["render_once"]) scope["render_once"].call(scope);
       //!if (scope["render"]) scope["render"].apply(scope,...args);
     }
-    // ======================================================== ACME_BaseElement.$dispatch
+    // ======================================================== ACME_BaseClass.$dispatch
     $dispatch({
       name, // EventName
       detail = {}, // event.detail
@@ -256,8 +271,9 @@
       once = false, // default .dispatchEvent option to execute a Listener once
     }) {
       //console.warn("%c EventName:", "background:yellow", name, [detail]);
-      window.ColorDialogEvents = window.ColorDialogEvents || new Set();
-      window.ColorDialogEvents.add(name);
+      window.HTMLColorPicker_Events =
+        window.HTMLColorPicker_Events || new Set();
+      window.HTMLColorPicker_Events.add(name);
       eventbus.dispatchEvent(
         new CustomEvent(name, {
           ...options, //
@@ -266,7 +282,7 @@
         once // default false
       );
     }
-    // ======================================================== ACME_BaseElement.$emit
+    // ======================================================== ACME_BaseClass.$emit
     // shorthand code for $dispatch({})
     $emit(name, detail = {}, root = this) {
       root.$dispatch({
@@ -274,7 +290,7 @@
         detail, // evt.detail
       });
     }
-    // ======================================================== ACME_BaseElement.$listen
+    // ======================================================== ACME_BaseClass.$listen
     $listen({
       name = this.nodeName, // first element is String or configuration Object{}
       handler = () => {}, // optional handler FUNCTION, default empty function
@@ -290,22 +306,22 @@
       this._listeners = this._listeners || [];
       this._listeners.push(() => eventbus.$removeEventListener(name, handler));
     }
-    // ======================================================== ACME_BaseElement.removeEventListeners
+    // ======================================================== ACME_BaseClass.removeEventListeners
     $removeEventListeners() {
       this._listeners.map((x) => x());
     }
-    // ======================================================== ACME_BaseElement
+    // ======================================================== ACME_BaseClass
   }
 
-  // ********************************************************** ACME_BaseElement
+  // ********************************************************** ACME_BaseClass
 
-  // ********************************************************** HTMLColorDialogBaseElement
-  class HTMLColorDialogBaseElement extends ACME_BaseElement {
+  // ********************************************************** BaseClass
+  class BaseClass extends ACME_BaseClass {
     //! no connectedCallback defined, calls super.connectedCallback() by default!
     // connectedCallback() {
     //   super.connectedCallback();
     // }
-    // ======================================================== HTMLColorDialog BaseElement.sorts
+    // ========================================================BaseClass.sorts
     static get sorts() {
       const sortFunc = (key) => (a, b) => a.colors[key] - b.colors[key];
       return {
@@ -329,13 +345,13 @@
         user1: sortFunc("user1"),
       };
     }
-    // ======================================================== HTMLColorDialog BaseElement.eyedropper
+    // ========================================================BaseClass.eyedropper
     eyedropper() {
-      this.$emit("colordialogstate", "close");
+      this.$emit(__EVENTNAME_DIALOG_STATE__, "close");
       if (!window.EyeDropper) {
         console.warn("Your browser does not support the EyeDropper API");
         this.$emit(
-          "colordialogtoast",
+          "colordialogtoast", // to be implemented
           "Your browser does not support the EyeDropper API"
         );
         return;
@@ -344,14 +360,14 @@
       eyeDropper
         .open()
         .then((result) => {
-          this.$emit("colordialogstate", "open");
+          this.$emit(__EVENTNAME_DIALOG_STATE__, "open");
           this.$emit("colormatch", result.sRGBHex);
         })
         .catch((e) => {
           console.log("eyedropper canceled", e);
         });
     }
-    // ======================================================== HTMLColorDialog BaseElement.colors
+    // ========================================================BaseClass.colors
     static get colors() {
       /**
        these color names are standardized, not because they are good, but because their use and implementation has been widespread for decades 
@@ -406,7 +422,7 @@
         `lavenderblush,lightpink,hotpink,palevioletred,deeppink,crimson,darkmagenta`
       );
     }
-    // ======================================================== HTMLColorDialog BaseElement.rgb2hex
+    // ========================================================BaseClass.rgb2hex
     rgb2hex(colorRGBString) {
       let rgb = colorRGBString.substr(4).split(")")[0].split(","),
         r = (+rgb[0]).toString(16),
@@ -419,7 +435,7 @@
 
       return "#" + r + g + b;
     }
-    // ======================================================== HTMLColorDialog BaseElement.contrastColor
+    // ========================================================BaseClass.contrastColor
     contrastColor(color = "ffffff", low = "black", high = "beige") {
       color = color.replace("#", "");
       return (parseInt(color.slice(0, 2), 16) * 299 +
@@ -432,11 +448,11 @@
     }
   }
 
-  // ********************************************************** <cd-label>
+  // ********************************************************** <HCP-label>
   customElements.define(
     __ELEMENT_LABEL__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <cd-label>.event_click
+    class extends BaseClass {
+      // ======================================================== <HCP-label>.event_click
       event_$click(evt) {
         evt.preventDefault();
         let text = this.textContent;
@@ -453,11 +469,11 @@
     }
   );
 
-  // ********************************************************** <cd-color>
+  // ********************************************************** <HCP-color>
   customElements.define(
     __ELEMENT_COLOR__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <cd-color>.connectedCallback
+    class extends BaseClass {
+      // ======================================================== <HCP-color>.connectedCallback
       connectedCallback() {
         super.connectedCallback();
         if (this.initialized) return; // connectedCallback runs every time it is added AND MOVED in the DOM
@@ -465,22 +481,22 @@
 
         this.render();
       }
-      // ======================================================== <cd-color>.set order
+      // ======================================================== <HCP-color>.set order
       set order(n) {
         this.style.setProperty("order", n);
       }
       get order() {
         return this.style.getPropertyValue("order");
       }
-      // ======================================================== <cd-color>.set name
+      // ======================================================== <HCP-color>.set name
       set name(n) {
         this.querySelector("." + __COLOR_name__).textContent = n;
       }
-      // ======================================================== <cd-color>.set hex
+      // ======================================================== <HCP-color>.set hex
       set hex(h) {
         this.querySelector("." + __COLOR_hex__).textContent = h;
       }
-      // ======================================================== <cd-color>.set color
+      // ======================================================== <HCP-color>.set color
       get color() {
         return getComputedStyle(this).backgroundColor;
       }
@@ -510,15 +526,15 @@
         this.name = name;
         this.hex = hex;
       }
-      // ======================================================== <cd-color>.event_$click
+      // ======================================================== <HCP-color>.event_$click
       event_$click(evt) {
         // todo special ctrlKey event notation?
         //if (evt.ctrlKey)
         this.$emit("colormatch", this.colors.hex);
       }
       //! event_ handlers configured automagically in BaseElement
-      // ======================================================== <cd-color>.event_namematch
-      // Every <cd-color> listens to every "namematch" event, to match by name
+      // ======================================================== <HCP-color>.event_namematch
+      // Every <HCP-color> listens to every "namematch" event, to match by name
       event_namematch(evt) {
         const namematch = evt.detail;
         if (namematch) {
@@ -529,7 +545,7 @@
           this.classList.remove("namematched"); //todo required, toggle does it?
         }
       }
-      // ======================================================== <cd-color>.event_matchcolorname
+      // ======================================================== <HCP-color>.event_matchcolorname
       event_matchcolorname(evt) {
         if (this.id == evt.detail.color) {
           log(
@@ -539,21 +555,20 @@
           evt.detail.callback(this.colors.hex);
         }
       }
-      // ======================================================== <cd-color>.event_colormatch
+      // ======================================================== <HCP-color>.event_colormatch
       //! event_namematch doesn't fire on colormatch, remove namematched class
       event_colormatch(evt) {
         this.classList.remove("namematched");
         // set opacity according to distance from match color
         // console.error("fading opacity",this.colors.contrastValue);
       }
-      // ======================================================== <cd-color>.event_indexmatch
+      // ======================================================== <HCP-color>.event_indexmatch
       event_indexmatch(evt) {
-        console.log(this);
         if (evt.detail.indexmatch == this.index) {
           this.color = evt.detail.color;
         }
       }
-      // ======================================================== <cd-color>.render
+      // ======================================================== <HCP-color>.render
       render() {
         this.replaceChildren(
           ...[__COLOR_name__, __COLOR_hex__]
@@ -569,23 +584,22 @@
         this.color = this.id;
         this.initdrag();
       }
-      // ======================================================== <cd-color>.initdrag
+      // ======================================================== <HCP-color>.initdrag
       initdrag() {
         this.initdrag = () => {}; //! overload initdrag, so it runs only once
 
         this.setAttribute("draggable", true);
         const /* function */ dispatch = (detail) =>
-            this.$dispatch({ name: "colordialogdrag", detail });
+            this.$dispatch({ name: __EVENTNAME_COLORDRAG__, detail });
 
         Object.assign(this, {
           ondragstart: (evt) => {
+            log("dragging:", this.id);
             dispatch({
               dragcolor: this,
             });
           },
-          ondragenter: (evt) => {
-            log(this.id);
-          },
+          ondragenter: (evt) => {},
           ondragleave: (evt) => {},
           ondragover: (evt) => {
             dispatch({
@@ -599,7 +613,7 @@
           },
         });
       }
-      // ======================================================== <cd-color>.swapwith
+      // ======================================================== <HCP-color>.swapwith< app >
       swapwith(color) {
         let saveorder = this.order;
         this.order = color.order;
@@ -608,20 +622,19 @@
     }
   );
 
-  // ********************************************************** <CD-color-grid>
+  // ********************************************************** <HCP-color-grid>
   customElements.define(
     __ELEMENT_COLOR_GRID__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <CD-color-grid>.connectedCallback
+    class extends BaseClass {
+      // ======================================================== <HCP-color-grid>.connectedCallback
       connectedCallback() {
         super.connectedCallback();
         this.drag = {};
         this.render();
       } //connectedCallback
-      // ======================================================== <CD-color-grid>.render
+      // ======================================================== <HCP-color-grid>.render
       render() {
-        let colors =
-          this.getAttribute("colors") || HTMLColorDialogBaseElement.colors;
+        let colors = this.getAttribute("colors") || BaseClass.colors;
         this.elements = colors.split`,`
           .slice(0, 140)
           .map((colordef) => colordef.split`:`)
@@ -632,7 +645,7 @@
                 class: "", //! for HTML readability only; Move class attribute to beginning of attribute list
               },
               //props: {
-              order: index, //! <cd-color> are not redrawn! Positioning is with CSS order:index
+              order: index, //! <HCP-color> are not redrawn! Positioning is with CSS order:index
               index, // initial index
               id: colorname,
               namelength: colorname.length,
@@ -645,7 +658,7 @@
           );
         this.replaceChildren(...this.elements);
       }
-      // ======================================================== <CD-color-grid>.orderDiagonal
+      // ======================================================== <HCP-color-grid>.orderDiagonal
       orderDiagonal() {
         setTimeout(() => {
           this.childNodes.forEach((cdc) => {
@@ -657,11 +670,11 @@
           });
         });
       }
-      // ======================================================== <CD-color-grid>.sort
+      // ======================================================== <HCP-color-grid>.sort
       sort(sortOrder = this.getAttribute("sort") || "index") {
         this.elements
           // get the wanted sortOrder Function from .sorts
-          .sort(HTMLColorDialogBaseElement.sorts[sortOrder])
+          .sort(BaseClass.sorts[sortOrder])
           // change all CSS order settings
           .map((element, idx) => {
             element.order = idx;
@@ -671,15 +684,15 @@
 
         log(`${this.nodeName} sorted:%c ${sortOrder}`, "background:gold");
       } // render
-      // ======================================================== <CD-color-grid>.event_colormatch
+      // ======================================================== <HCP-color-grid>.event_colormatch
       event_colormatch(evt) {
         this.toggleAttribute("namematch", false);
       }
-      // ======================================================== <CD-color-grid>.event_namematch
+      // ======================================================== <HCP-color-grid>.event_namematch
       event_namematch(evt) {
         this.toggleAttribute("namematch", evt.detail);
       }
-      // ======================================================== <CD-color-grid>.event_sort
+      // ======================================================== <HCP-color-grid>.event_sort
       event_sort(evt) {
         let sortOrder = evt.detail.replace("sort", ""); // strip from "sortindex"
         log(this.nodeName + " sorting", sortOrder);
@@ -688,8 +701,8 @@
           this.orderDiagonal();
         }
       }
-      // ======================================================== <CD-color-grid>.event_colordialogdrag
-      event_colordialogdrag(evt) {
+      // ======================================================== <HCP-color-grid>.event_colordrag
+      event_colordrag(evt) {
         let { dragcolor, dragover } = evt.detail;
         if (dragcolor) {
           // start dragging
@@ -705,32 +718,32 @@
             this.$emit("storecolors");
           }
         }
-      } // event_colordialogdrag
+      } // event_colordrag
     }
   );
 
-  // ********************************************************** <CD-sort-grid>
+  // ********************************************************** <HCP-sort-grid>
   customElements.define(
     __ELEMENT_COLOR_DIALOG_SORT_GRID__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <CD-sort-grid>.connectedCallback
+    class extends BaseClass {
+      // ======================================================== <HCP-sort-grid>.connectedCallback
       connectedCallback() {
         super.connectedCallback();
         this.render();
       } //connectedCallback
-      // ======================================================== <CD-sort-grid>.event_sort
+      // ======================================================== <HCP-sort-grid>.event_sort
       event_sort(evt) {
         let sortOrder = evt.detail;
         log(this.nodeName + " SORT", sortOrder);
         this.setAttribute("sort", sortOrder); // so it can be used in CSS selectors
-        this.$query("select").value = sortOrder;
+        //this.$query("select").value = sortOrder; // todo, write as Event pattern
       }
-      // ======================================================== <CD-sort-grid>.event_setnamematch
+      // ======================================================== <HCP-sort-grid>.event_setnamematch
       event_setnamematch(evt) {
         this.inputElement.value = evt.detail;
         this.inputElement.dispatchEvent(new Event("keyup"));
       }
-      // ======================================================== <CD-sort-grid>.input_namematch
+      // ======================================================== <HCP-sort-grid>.input_namematch
       input_namematch(namematch = "") {
         // this.$emit("attribute_namematch", namematch);
         //this.$emit("borderColor", __APP_COLOR__);
@@ -745,8 +758,9 @@
           this.$emit("namematch", namematch);
         }
       }
-      // ======================================================== <CD-sort-grid>.render
+      // ======================================================== <HCP-sort-grid>.render
       render() {
+        // --------------------------------------------------------- <input type="text">
         this.inputElement = this.$element({
           tag: "input",
           attrs: {
@@ -754,36 +768,51 @@
           },
           onkeyup: (evt) => this.input_namematch(evt.target.value),
         }); // inputElement
+        // --------------------------------------------------------- <select>
+        this.selectElement = this.$element({
+          tag: "select",
+          onchange: (evt) => {
+            this.$dispatch({
+              name: "sort",
+              detail: evt.target.value,
+            });
+          },
+          // ---------------------------------------------- add <option>s
+          append: Object.entries(BaseClass.sorts).map(([key, func]) =>
+            this.$element({
+              tag: "option",
+              value: key,
+              innerText: key,
+            })
+          ),
+        });
+        // --------------------------------------------------------- add DOM elements
         this.replaceChildren(
+          //this.selectElement,
+          "search:",
+          this.inputElement,
           this.$element({
-            tag: "select",
-            onchange: (evt) => {
-              this.$dispatch({
-                name: "sort",
-                detail: evt.target.value,
-              });
+            tag: "span",
+            styles: {},
+            innerHTML:
+              "&nbsp;<b> An experiment in Event driven Web Components</b> - Click or Drag colors",
+            events: {
+              onmouseenter: (evt) => {
+                log("title", evt.detail, this);
+              },
             },
-            // add <option>s
-            append: Object.entries(HTMLColorDialogBaseElement.sorts).map(
-              ([key, func]) =>
-                this.$element({
-                  tag: "option",
-                  value: key,
-                  innerText: key,
-                })
-            ),
-          }),
-          this.inputElement
+            listeners: {},
+          })
         ); // append
       } // render
     } // class
-  ); // define <CD-sort-grid>
+  ); // define <HCP-sort-grid>
 
-  // ********************************************************** <color-dialog>
+  // ********************************************************** < app >
   customElements.define(
     __ELEMENT_APP__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <color-dialog>.constructor
+    class extends BaseClass {
+      // ======================================================== < app >.constructor
       constructor() {
         super().attachShadow({ mode: "open" }).innerHTML =
           /* html  */ `<style>` +
@@ -804,12 +833,15 @@
           /* css  */ `${__ELEMENT_LABEL__}:hover{cursor:pointer}` +
           // matching typed colorname
           /* css  */ `.namematched{zoom:1.0}` +
-          // dim all cd-colors when searching for a namematch
-          /* css  */ `${__ELEMENT_COLOR_GRID__}[namematch] ${__ELEMENT_COLOR__}:not(.namematched){opacity:.3}` +
+          // dim all HCP-colors when searching for a namematch
+          /* css  */ `${__ELEMENT_COLOR_GRID__}[namematch] ${__ELEMENT_COLOR__}:not(.namematched){` +
+          /* css  */ `opacity:.3;` +
+          /* css  */ `display:none;` +
+          /* css  */ `}` +
           // footer
-          /* css  */ `dialog::after{content:"<html-color-dialog> by Roads Technology";color:beige;font-size:70%;position:fixed;}` +
+          ///* css  */ `dialog::after{content:"CSS can't respond to Event to change color like the icons do";background:purple;color:beige;font-size:70%;position:fixed;}` +
           // toolbar //
-          /* css  */ `${__ELEMENT_TOOLBAR__}{display:flex;gap:5px;justify-content:start;width:100%;height:30px;cursor:pointer;}` +
+          /* css  */ `${__ELEMENT_TOOLBAR__}{display:flex;gap:5px;justify-content:space-evenly;width:100%;height:30px;cursor:pointer;}` +
           // size toolbar buttons //
           /* css  */ `${__ELEMENT_ICON__}{width:24px;height:24px}` +
           /* css  */ `${__ELEMENT_HEADER__}{display:grid;grid:1fr/250px 1fr 50px;background:var(--borderColor,beige)}` +
@@ -818,37 +850,24 @@
             tag: "dialog", // standard HTML <dialog>
             html:
               this.$elementHTML({
-                tag: __ELEMENT_HEADER__, // <color-dialog-header>
+                tag: __ELEMENT_HEADER__,
                 html:
-                  this.$elementHTML({ tag: __ELEMENT_TOOLBAR__ }) + // <color-dialog-toolbar>
+                  this.$elementHTML({ tag: __ELEMENT_TOOLBAR__ }) +
                   this.$elementHTML({
-                    tag: __ELEMENT_COLOR_DIALOG_SORT_GRID__, // <color-dialog-sort-list>
-                  }) +
-                  `<input type="checkbox" class="opener" />
-                    <nav>
-                    <a href="#home">Home</a> <a href="#about">About</a>
-                    <a href="#contacts">Contacts</a>
-                    </nav>
-                    <style>
-                    input.opener: checked + nav { display: block;
-                    }
-                    input.opener{ appearance: none; }
-                    input.opener::after {
-                    content: "="
-                    }
-                    </style>`,
-              }) + this.$elementHTML({ tag: __ELEMENT_COLOR_GRID__ }), // <color-dialog-color-grid>
+                    tag: __ELEMENT_COLOR_DIALOG_SORT_GRID__,
+                  }),
+              }) + this.$elementHTML({ tag: __ELEMENT_COLOR_GRID__ }),
           });
       }
-      // ======================================================== <color-dialog>.dialog
+      // ======================================================== < app >.dialog
       get dialog() {
         return this.shadowRoot.querySelector("dialog");
       }
-      // ======================================================== <color-dialog>.open
+      // ======================================================== < app >.open
       open() {
         this.dialog.showModal();
       }
-      // ======================================================== <color-dialog>.open
+      // ======================================================== < app >.open
       close() {
         this.dialog.close();
       }
@@ -862,7 +881,7 @@
           }[evt.detail] || "open"
         ]();
       }
-      // ======================================================== <color-dialog>.match
+      // ======================================================== < app >.match
       match(hexcolor, sortDistance = __COLOR_distanceLab__) {
         hexcolor = ensureHexcolor(hexcolor);
         log("match", hexcolor);
@@ -932,16 +951,14 @@
         });
 
         this.$emit("sort", sortDistance); // multiple components are listening
-        console.error("sorted by distance");
         this.$emit("borderColor", hexcolor);
       }
-      // ======================================================== <color-dialog>.event_sort
+      // ======================================================== < app >.event_sort
       event_sort(evt) {
         let sortOrder = evt.detail;
-        console.warn(this.nodeName, "sort:", sortOrder);
         this.setAttribute("sort", sortOrder);
       }
-      // ======================================================== <color-dialog>.html_subdialog
+      // ======================================================== < app >.html_subdialog
       html_subdialog(color) {
         return [
           "monochrome",
@@ -957,7 +974,7 @@
             `<img style="height:200px;width:103px;" src="https://www.thecolorapi.com/scheme?hex=${color}&format=svg&named=false&count=10&w=120&mode=${name}"/>`
         );
       }
-      // ======================================================== <color-dialog>.subcolor
+      // ======================================================== < app >.subcolor
       subcolor(color, evt = {}) {
         console.warn(color, evt, evt.target, this);
         let subdialog = this.$query("#subdialog");
@@ -968,23 +985,23 @@
         //     //`https://www.computerhope.com/cgi-bin/htmlcolor.pl?c=${color}`
         //   );
       }
-      // ======================================================== <color-dialog>.colors
+      // ======================================================== < app >.colors
       get colors() {
         return [...this.shadowRoot.querySelectorAll(__ELEMENT_COLOR__)];
       }
       get colornames() {
         return this.colors.map((col) => col.colors.name).join(",");
       }
-      // ======================================================== <color-dialog>.listnames
+      // ======================================================== < app >.listnames
       listnames() {
         console.log(this.colornames);
       }
-      // ======================================================== <color-dialog>.event_namematch
+      // ======================================================== < app >.event_namematch
       event_namematch(evt) {
         //! on Web Component so users can act on it. Its also on the list to change opacity
         this.toggleAttribute("namematch", evt.detail);
       }
-      // ======================================================== <color-dialog>.event_borderColor
+      // ======================================================== < app >.event_borderColor
       event_borderColor(evt) {
         let borderColor = evt.detail;
         let borderFontColor = "beige";
@@ -1003,43 +1020,49 @@
         //setCSSpropertyColor("borderFontColor", borderFontColor);
         // if a DOM reference, gets its contrast color
       }
-      // ======================================================== <color-dialog>.event_colormatch
+      // ======================================================== < app >.event_colormatch
       event_colormatch(evt) {
         let color = evt.detail;
         log("event_colormatch", color);
         // Events are synchronous
-        // if color is a HTML Colorname, the <cd-color> will respond with the correct Hex color value
+        // if color is a HTML Colorname, the <HCP-color> will respond with the correct Hex color value
         this.$emit("matchcolorname", {
           color,
           callback: (hexcolor) => (color = hexcolor),
         });
         this.match(color);
       }
-      // ======================================================== <color-dialog>.event_storecolors
+      // ======================================================== < app >.event_storecolors
       event_storecolors(evt) {
         localStorage.setItem("color-dialog", this.colornames);
       }
-      // ======================================================== <color-dialog>.event_readcolors
+      // ======================================================== < app >.event_readcolors
       event_readcolors(evt) {
-        console.error(evt.type, evt.target.nodeName);
         let colors = localStorage.getItem("color-dialog");
+
+        todo(
+          `Implement reading colors from localStorage("color-dialog")`,
+          evt.type,
+          evt.target.nodeName
+        );
       }
-      // ======================================================== <color-dialog>.event_click
+      // ======================================================== < app >.event_click
       event_click(evt) {
         //! evt.preventDefault();
         if (evt.ctrlKey && evt.altKey) this.open();
       }
-      // ======================================================== <color-dialog>.connectedCallback
+      // ======================================================== < app >.connectedCallback
       connectedCallback() {
         super.connectedCallback();
-        if (this.hasAttribute("open")) this.$emit("colordialogstate", "open");
+        if (this.hasAttribute("open"))
+          this.$emit(__EVENTNAME_DIALOG_STATE__, "open");
 
         setTimeout(() => {
           // wait till all innerHTML is parsed
-          //! needs initial <cd-colors> to be rendered
+          //! needs initial <HCP-colors> to be rendered
           let color = "#F68222";
           color = "red";
-          this.$emit("colormatch", color);
+          this.$emit(__EVENTNAME_COLORMATCH__, color);
           this.$emit("storecolors");
           this.$emit("readcolors");
           // this.$emit("setnamematch", "dark");
@@ -1049,21 +1072,21 @@
             `${this.nodeName} %c ${color}`,
             `background:${color};color:white`,
             "\ndispatched eventnames:",
-            [...window.ColorDialogEvents.values()].join(",")
+            [...window.HTMLColorPicker_Events.values()].join(",")
           );
         });
-      } // end connectedCallback <color-dialog>
-    } // end class <color-dialog>
-  ); // end define <color-dialog>
-  // ********************************************************** <CD-toolbar>
+      } // end connectedCallback < app >
+    } // end class < app >
+  ); // end define < app >
+  // ********************************************************** <HCP-toolbar>
   customElements.define(
     __ELEMENT_TOOLBAR__,
-    class extends HTMLColorDialogBaseElement {
-      // ======================================================== <CD-toolbar>.event_borderColor
+    class extends BaseClass {
+      // ======================================================== <HCP-toolbar>.event_borderColor
       event_borderColor(evt) {
         log(this.nodeName, "Event: borderColor", evt.detail);
       }
-      // ======================================================== <CD-toolbar>.connectedCallback
+      // ======================================================== <HCP-toolbar>.connectedCallback
       connectedCallback() {
         super.connectedCallback();
         // add all icons to the toolbar
@@ -1087,11 +1110,11 @@
             })
           )
         );
-      } // end connectedCallback <CD-toolbar>
-    } // end class <CD-toolbar>
-  ); // end define <CD-toolbar>
+      } // end connectedCallback <HCP-toolbar>
+    } // end class <HCP-toolbar>
+  ); // end define <HCP-toolbar>
 
-  // ********************************************************** <CD-svg-icon is="">
+  // ********************************************************** <HCP-svg-icon is="">
   // copied <svg-icon> from from: https://iconmeister.github.io
   // enhanced it for color-dialog
   ((
@@ -1126,13 +1149,13 @@
   ) =>
     customElements.define(
       __ELEMENT_ICON__,
-      class extends HTMLColorDialogBaseElement {
-        // ======================================================== <CD-svg-icon>.observedAttributes
+      class extends BaseClass {
+        // ======================================================== <HCP-svg-icon>.observedAttributes
         static get observedAttributes() {
           return Object.keys(attributes);
         }
         //! $notation marks the event listener to listen on this element only, not at the (document) eventbus
-        // ======================================================== <CD-svg-icon>.event_$click
+        // ======================================================== <HCP-svg-icon>.event_$click
         event_$click(evt) {
           if (this.sort.startsWith("sort")) {
             this.$emit("sort", this.sort);
@@ -1140,21 +1163,21 @@
             this[this.sort].apply(this);
           }
         }
-        // ======================================================== <CD-svg-icon>.event_sort
+        // ======================================================== <HCP-svg-icon>.event_sort
         event_sort(evt) {
           this.toggleAttribute("selected", this.sort === evt.detail);
         }
-        // ======================================================== <CD-svg-icon>.event_borderColor
+        // ======================================================== <HCP-svg-icon>.event_borderColor
         event_borderColor(evt) {
           this.color = this.contrastColor(
             typeof evt.detail == "object" ? evt.detail.hex : evt.detail
           );
         }
-        // ======================================================== <CD-svg-icon>.color
+        // ======================================================== <HCP-svg-icon>.color
         set color(str) {
           this.fill = this.stroke = str;
         }
-        // ======================================================== <CD-svg-icon>.attributeChangedCallback
+        // ======================================================== <HCP-svg-icon>.attributeChangedCallback
 
         attributeChangedCallback() {
           setTimeout(() => {
@@ -1162,7 +1185,7 @@
             this.svg();
           }, 0);
         }
-        // ======================================================== <CD-svg-icon>.svg
+        // ======================================================== <HCP-svg-icon>.svg
         svg(
           icon = this,
           // ------------------------------------------------------

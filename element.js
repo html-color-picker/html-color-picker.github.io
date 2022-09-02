@@ -1074,16 +1074,16 @@
           // this.$emit("setnamematch", "dark");
           // this.$emit(__EVENTNAME_SORT__, "index");
 
-          //! The icons arenot yet in the DOM, so we need to wait for them to be rendered
+          //! The icons are not yet in the DOM, so we need to wait for them to be rendered
           setTimeout(() => {
             this.$emit(__EVENTNAME_COLORMATCH__, color);
-            setTimeout(() => {
-              this.$emit(
-                __EVENTNAME_SORT__,
-                localStorage.getItem(__ELEMENT_APP__ + "_sortOrder") ||
-                  "contrast"
-              );
-            }, 1000);
+            // setTimeout(() => {
+            //   this.$emit(
+            //     __EVENTNAME_SORT__,
+            //     localStorage.getItem(__ELEMENT_APP__ + "_sortOrder") ||
+            //       "contrast"
+            //   );
+            // }, 1000);
           }, 0);
 
           // todo get contrastvalue for color

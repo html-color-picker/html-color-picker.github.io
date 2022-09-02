@@ -543,6 +543,7 @@
             `YEAH! I AM %c ${this.id}`,
             `background:${this.id};color:${this.colors.contrast}`
           );
+          // execute
           evt.detail.callback(this.colors.hex);
         }
       }
@@ -891,7 +892,7 @@
         ]();
       }
       // ======================================================== < app >.match
-      match(hexcolor, sortDistance = __COLOR_distanceLab__) {
+      matchAllColors(hexcolor, sortDistance = __COLOR_distanceLab__) {
         hexcolor = ensureHexcolor(hexcolor);
         log("match", hexcolor);
         console.assert(this.colors.length, "No colors");
@@ -958,7 +959,7 @@
           elementColors[__COLOR_distanceLab__] = Lab.toFixed(2);
         });
 
-        //this.$emit(__EVENTNAME_SORT__, sortDistance); // multiple components are listening
+        this.$emit(__EVENTNAME_SORT__, sortDistance); // multiple components are listening
         this.$emit("borderColor", hexcolor);
       }
       // ======================================================== < app >.event_sort
@@ -1039,7 +1040,7 @@
           color,
           callback: (hexcolor) => (color = hexcolor),
         });
-        this.match(color);
+        this.matchAllColors(color);
       }
       // ======================================================== < app >.event_storecolors
       event_storecolors(evt) {

@@ -818,7 +818,7 @@
             styles: {},
             innerHTML: this.$elementHTML({
               tag: __ELEMENT_TEXT__,
-              html: `&nbsp;<b> WIP - An experiment in Event driven Web Components</b> - Click or Drag colors`,
+              html: `&nbsp;<b style="font-size:135%"> An experiment in Event driven Web Components</b>`,
             }),
           })
         ); // append

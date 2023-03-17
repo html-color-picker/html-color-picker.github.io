@@ -1,30 +1,5 @@
 !(function () {
-  // todo display colors staggered from top-left to bottom-right
-  // 7 x 16 square grid, transposed to diagonal presentation:
-  //  00  02  05  09  14  20  27
-  //  01  04  08  13  19  26  34
-  //  03  07  12  18  25  33  41
-  //  06  11  17  24  32  40  48
-  //  10  16  23  31  39  47  55
-  //  15  22  30  38  46  54  62
-  //  21  29  37  45  53  61  69
-  //  28  36  44  52  60  68  76
-  //  35  43  51  59  67  75  83
-  //  42  50  58  66  74  82  90
-  //  49  57  65  73  81  90  97
-  //  56  64  72  80  88  96
-  //  63  71  79  87  95
-  //  70  78  86  94 102
-  //  77  85  93 101
-  //  84  92 100
-  //  91  99
-  //  98
-  //  105
-  //  112
-  //  119
-  //  126
-  //  133
-  let diagonal = [
+  let sort_diagonal_positions_topleft_2_bottomright = [
     0, 7, 1, 14, 8, 2, 21, 15, 9, 3, 28, 22, 16, 10, 4, 35, 29, 23, 17, 11, 5,
     42, 36, 30, 24, 18, 12, 6, 49, 43, 37, 31, 25, 19, 13, 56, 50, 44, 38, 32,
     26, 20, 63, 57, 51, 45, 39, 33, 27, 70, 64, 58, 52, 46, 40, 34, 77, 71, 65,
@@ -69,7 +44,7 @@
     let label = args.shift();
     console.log(
       `%c ${label} `,
-      `background:${__APP_COLOR__};color:gold`,
+      `background:${__APP_COLOR__};color:gold;font-size:120%`,
       ...args
     );
   }
@@ -197,7 +172,7 @@
       // apply customevents
       Object.entries(customevents).map(([name, handler]) => {
         console.log(name, handler, this);
-        this.$listen({
+        this.$listen_signal({
           name,
           handler: handler.bind(element), // bind element scope to handler
           eventbus: document,
@@ -253,7 +228,7 @@
               if (useCapture) name = name.replace("_capture", "");
 
               // register the listener
-              scope.$listen({
+              scope.$listen_signal({
                 name, // eventName
                 eventbus,
                 handler: scope[method].bind(scope),
@@ -268,7 +243,7 @@
       //!if (scope["render"]) scope["render"].apply(scope,...args);
     }
     // ======================================================== ACME_BaseClass.$dispatch
-    $dispatch({
+    $dispatch_signal({
       name, // EventName
       detail = {}, // event.detail
       // override options PER option:
@@ -298,14 +273,14 @@
     }
     // ======================================================== ACME_BaseClass.$emit
     // shorthand code for $dispatch({})
-    $emit(name, detail = {}, root = this) {
-      root.$dispatch({
+    $emit_signal(name, detail = {}, root = this) {
+      root.$dispatch_signal({
         name, // eventName
         detail, // evt.detail
       });
     }
     // ======================================================== ACME_BaseClass.$listen
-    $listen({
+    $listen_signal({
       name = this.nodeName, // first element is String or configuration Object{}
       handler = () => { }, // optional handler FUNCTION, default empty function
       eventbus = this, // at what element in the DOM the listener should be attached
@@ -361,10 +336,10 @@
     }
     // ========================================================BaseClass.eyedropper
     eyedropper() {
-      this.$emit(__EVENTNAME_DIALOG_STATE__, "close");
+      this.$emit_signal(__EVENTNAME_DIALOG_STATE__, "close");
       if (!window.EyeDropper) {
         console.warn("Your browser does not support the EyeDropper API");
-        this.$emit(
+        this.$emit_signal(
           "colordialogtoast", // to be implemented
           "Your browser does not support the EyeDropper API"
         );
@@ -374,8 +349,8 @@
       eyeDropper
         .open()
         .then((result) => {
-          this.$emit(__EVENTNAME_DIALOG_STATE__, "open");
-          this.$emit("colormatch", result.sRGBHex);
+          this.$emit_signal(__EVENTNAME_DIALOG_STATE__, "open");
+          this.$emit_signal("colormatch", result.sRGBHex);
         })
         .catch((e) => {
           console.log("eyedropper canceled", e);
@@ -525,7 +500,7 @@
       event_$click(evt) {
         // todo special ctrlKey event notation?
         //if (evt.ctrlKey)
-        this.$emit("colormatch", this.colors.hex);
+        this.$emit_signal("colormatch", this.colors.hex);
       }
       //! event_ handlers configured automagically in BaseElement
       // ======================================================== <HCP-color>.event_namematch
@@ -588,7 +563,7 @@
         this.setAttribute("draggable", true);
 
         const /* function */ dispatch = (detail) =>
-          this.$dispatch({ name: __EVENTNAME_COLORDRAG__, detail });
+          this.$dispatch_signal({ name: __EVENTNAME_COLORDRAG__, detail });
 
         Object.assign(this, {
           ondragstart: (evt) => {
@@ -658,12 +633,13 @@
       }
       // ======================================================== <HCP-color-grid>.event_readcolors
       event_readcolors(evt) {
-        let colors = localStorage.getItem("color-dialog").split(",");
-        //! this.render(colors); will disconnect existing colors
-        console.log(`666 Read colors`, colors.slice(0, 5));
-        this.elements.map((el, idx) => {
-          el.order = colors.indexOf(el.id);
-        });
+        let colors = localStorage.getItem("color-dialog")?.split(",");
+        if (colors) {
+          //! this.render(colors); will disconnect existing colors
+          this.elements.map((el, idx) => {
+            el.order = colors.indexOf(el.id);
+          });
+        }
       }
       // ======================================================== <HCP-color-grid>.orderDiagonal
       orderDiagonal() {
@@ -673,7 +649,7 @@
             let column = order % 7;
             let row = Math.floor(order / 7);
             //cdc.hex = order + " / " + diagonal[order];
-            cdc.order = diagonal[order];
+            cdc.order = sort_diagonal_positions_topleft_2_bottomright[order];
           });
         });
       }
@@ -692,6 +668,9 @@
         this.setAttribute("sort", sortOrder);
         this.sortOrder = sortOrder;
         localStorage.setItem(__ELEMENT_APP__ + "_sortOrder", sortOrder);
+        if (sortOrder == "user1") {
+          alert(`In User mode colors can be swapped with Drag & Drop\nColors are saved in localStorage`);
+        }
 
         log(`${this.nodeName} sorted:%c ${sortOrder}`, "background:gold");
       } // render
@@ -705,7 +684,7 @@
           this.orderDiagonal();
         }
         if (sortOrder === "user1") {
-          this.$emit(__EVENTNAME_READCOLORS__);
+          this.$emit_signal(__EVENTNAME_READCOLORS__);
         }
       }
       // ======================================================== <HCP-color-grid>.event_colormatch
@@ -731,7 +710,7 @@
               // end drag
               this.drag.color.swapwith(this.drag.over);
               this.drag = {};
-              this.$emit(__EVENTNAME_STORECOLORS__);
+              this.$emit_signal(__EVENTNAME_STORECOLORS__);
             }
           }
         } else {
@@ -768,15 +747,15 @@
       input_namematch(namematch = "") {
         // this.$emit("attribute_namematch", namematch);
         //this.$emit("borderColor", __APP_COLOR__);
-        this.$emit("namematch", { namematch: false });
+        this.$emit_signal("namematch", { namematch: false });
         // if ABCDEF highlight nearest colors
         if (namematch.length == 6) {
           console.log("ABCDEF", namematch);
           // this.$emit("attribute_namematch", false);
-          this.$emit("colormatch", namematch);
+          this.$emit_signal("colormatch", namematch);
         } else {
           console.warn("Match use input", namematch);
-          this.$emit("namematch", namematch);
+          this.$emit_signal("namematch", namematch);
         }
       }
       // ======================================================== <HCP-sort-grid>.render
@@ -793,7 +772,7 @@
         this.selectElement = this.$element({
           tag: "select",
           onchange: (evt) => {
-            this.$dispatch({
+            this.$dispatch_signal({
               name: __EVENTNAME_SORT__,
               detail: evt.target.value,
             });
@@ -965,8 +944,8 @@
           elementColors[__COLOR_distanceLab__] = Lab.toFixed(2);
         });
 
-        this.$emit(__EVENTNAME_SORT__, sortDistance); // multiple components are listening
-        this.$emit("borderColor", hexcolor);
+        this.$emit_signal(__EVENTNAME_SORT__, sortDistance); // multiple components are listening
+        this.$emit_signal("borderColor", hexcolor);
       }
       // ======================================================== < app >.event_sort
       event_sort(evt) {
@@ -1042,7 +1021,7 @@
         log("event_colormatch", color);
         // Events are synchronous
         // if color is a HTML Colorname, the <HCP-color> will respond with the correct Hex color value
-        this.$emit("matchcolorname", {
+        this.$emit_signal("matchcolorname", {
           color,
           callback: (hexcolor) => (color = hexcolor),
         });
@@ -1052,7 +1031,6 @@
       event_storecolors(evt) {
         setTimeout(() => {
           let colors = this.colornames;
-          console.log("666 Store colors", colors.slice(0, 5));
           localStorage.setItem("color-dialog", colors);
         }, 100);
       }
@@ -1069,7 +1047,7 @@
       connectedCallback() {
         super.connectedCallback();
         if (this.hasAttribute("open"))
-          this.$emit(__EVENTNAME_DIALOG_STATE__, "open");
+          this.$emit_signal(__EVENTNAME_DIALOG_STATE__, "open");
 
         setTimeout(() => {
           // wait till all innerHTML is parsed
@@ -1082,7 +1060,7 @@
 
           //! The icons are not yet in the DOM, so we need to wait for them to be rendered
           setTimeout(() => {
-            this.$emit(__EVENTNAME_COLORMATCH__, color);
+            this.$emit_signal(__EVENTNAME_COLORMATCH__, color);
             // setTimeout(() => {
             //   this.$emit(
             //     __EVENTNAME_SORT__,
@@ -1202,7 +1180,7 @@
         // ======================================================== <HCP-svg-icon>.event_$click
         event_$click(evt) {
           if (this.sort.startsWith(__EVENTNAME_SORT__)) {
-            this.$emit(__EVENTNAME_SORT__, this.sort);
+            this.$emit_signal(__EVENTNAME_SORT__, this.sort);
           } else if (this[this.sort]) {
             this[this.sort].apply(this);
           }

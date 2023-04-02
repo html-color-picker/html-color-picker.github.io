@@ -279,7 +279,7 @@
         detail, // evt.detail
       });
     }
-    // ======================================================== ACME_BaseClass.$listen
+    // ======================================================== ACME_BaseClass.$listen_signal
     $listen_signal({
       name = this.nodeName, // first element is String or configuration Object{}
       handler = () => { }, // optional handler FUNCTION, default empty function

@@ -1,3 +1,7 @@
+// an experiment in Event Driven Web Components
+
+// Communication between Web Components with "event_NAME" methods on every Web Component
+
 !(function () {
   let sort_diagonal_positions_topleft_2_bottomright = [
     0, 7, 1, 14, 8, 2, 21, 15, 9, 3, 28, 22, 16, 10, 4, 35, 29, 23, 17, 11, 5,
@@ -282,7 +286,7 @@
     // ======================================================== ACME_BaseClass.$listen_signal
     $listen_signal({
       name = this.nodeName, // first element is String or configuration Object{}
-      handler = () => { }, // optional handler FUNCTION, default empty function
+      handler = () => {}, // optional handler FUNCTION, default empty function
       eventbus = this, // at what element in the DOM the listener should be attached
       useCapture = false, // optional, default false
     }) {
@@ -509,7 +513,8 @@
         const namematch = evt.detail;
         if (namematch) {
           const toggleState =
-            this.name.includes(namematch) || this.colors.hex.includes(namematch);
+            this.name.includes(namematch) ||
+            this.colors.hex.includes(namematch);
           this.classList.toggle("namematched", toggleState);
           this.name = this.name.replaceAll(namematch, `<b>${namematch}</b>`);
         } else {
@@ -558,12 +563,12 @@
       }
       // ======================================================== <HCP-color>.initdrag
       initdrag() {
-        this.initdrag = () => { }; //! overload initdrag, so it runs only once
+        this.initdrag = () => {}; //! overload initdrag, so it runs only once
 
         this.setAttribute("draggable", true);
 
         const /* function */ dispatch = (detail) =>
-          this.$dispatch_signal({ name: __EVENTNAME_COLORDRAG__, detail });
+            this.$dispatch_signal({ name: __EVENTNAME_COLORDRAG__, detail });
 
         Object.assign(this, {
           ondragstart: (evt) => {
@@ -572,8 +577,8 @@
               dragcolor: this,
             });
           },
-          ondragenter: (evt) => { },
-          ondragleave: (evt) => { },
+          ondragenter: (evt) => {},
+          ondragleave: (evt) => {},
           ondragover: (evt) => {
             dispatch({
               dragover: this,
@@ -669,7 +674,9 @@
         this.sortOrder = sortOrder;
         localStorage.setItem(__ELEMENT_APP__ + "_sortOrder", sortOrder);
         if (sortOrder == "user1") {
-          alert(`In User mode colors can be swapped with Drag & Drop\nColors are saved in localStorage`);
+          alert(
+            `In User mode colors can be swapped with Drag & Drop\nColors are saved in localStorage`
+          );
         }
 
         log(`${this.nodeName} sorted:%c ${sortOrder}`, "background:gold");
@@ -714,7 +721,7 @@
             }
           }
         } else {
-          alert(
+          console.warn(
             "Order can only be changed in the (first icon) 'user' sortOrder view"
           );
         }
@@ -1006,11 +1013,11 @@
         }
 
         const /* function */ setCSSpropertyColor = (name, color) => {
-          if (color.length == 6 || color[0] == "#") {
-            color = ensureHexcolor(color);
-          }
-          this.style.setProperty("--" + name, color);
-        };
+            if (color.length == 6 || color[0] == "#") {
+              color = ensureHexcolor(color);
+            }
+            this.style.setProperty("--" + name, color);
+          };
         setCSSpropertyColor("borderColor", borderColor);
         setCSSpropertyColor("borderFontColor", borderFontColor);
         // if a DOM reference, gets its contrast color
@@ -1239,27 +1246,32 @@
             )
           ).join``,
           half = icon.box / 2,
-          svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${icon.w || icon.box
-            } ${icon.h || icon.box}' style='vertical-align:top'>${icon.rect
-            }<g stroke-width='{width}' stroke='{stroke}' fill='{fill}' opacity='{opacity}' filter='{filter}' transform='translate({xy}) matrix({scale} 0 0 {scale} ${half - half * icon.scale
-            } ${half - half * icon.scale
-            }) rotate({rotate} ${half} ${half})'>${svgStr}</g>${icon.top
-            }</svg>`.replace(
-              /{\s?([^{}\s]*)\s?}/g,
-              (_, property) => icon[property] // string replace all {x} with property x on icon
-            )
+          svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${
+            icon.w || icon.box
+          } ${icon.h || icon.box}' style='vertical-align:top'>${
+            icon.rect
+          }<g stroke-width='{width}' stroke='{stroke}' fill='{fill}' opacity='{opacity}' filter='{filter}' transform='translate({xy}) matrix({scale} 0 0 {scale} ${
+            half - half * icon.scale
+          } ${
+            half - half * icon.scale
+          }) rotate({rotate} ${half} ${half})'>${svgStr}</g>${
+            icon.top
+          }</svg>`.replace(
+            /{\s?([^{}\s]*)\s?}/g,
+            (_, property) => icon[property] // string replace all {x} with property x on icon
+          )
         ) {
           // ------------------------------------------------------
           // this replaces the whole Web Component
           return icon.img
             ? this.replaceChildren(
-              this.$element({
-                tag: "img",
-                src: "data:image/svg+xml," + svg.replace(/#/g, "%23"),
-                //! can't do events that trigger redraw here
-                // onmouseenter: (evt) => (this.stroke = "green"),
-              })
-            )
+                this.$element({
+                  tag: "img",
+                  src: "data:image/svg+xml," + svg.replace(/#/g, "%23"),
+                  //! can't do events that trigger redraw here
+                  // onmouseenter: (evt) => (this.stroke = "green"),
+                })
+              )
             : (this.innerHTML = svg);
           // original https://iconmeister.github.io code:
           // return (icon.innerHTML =
@@ -1272,22 +1284,22 @@
         }
       }
     ))({
-      // ------------------------------------------------------
-      sortindex:
-        "box:64;fill:#000;width:.01;path:m38 12h2v8h-2a2 2 90 00-2 2v4a2 2 90 002 2h12a2 2 90 002-2v-4a2 2 90 00-2-2h-2v-14a2 2 90 00-2-2h-6a2 2 90 00-2 2l-2 4a2 2 90 002 2m-15 32h-6v-38a2 2 90 00-2-2h-4a2 2 90 00-2 2v38h-6c-2 0-3 3-2 4l10 12a2 2 90 003 0l10-12c2-1 1-4-2-4z",
-      sortnamelength:
-        "box:512;fill:#000;width:.1;path:M240 96h64a16 16 0 0016-16v-32a16 16 0 00-16-16h-64a16 16 0 00-16 16v32a16 16 0 0016 16zM240 254h128a16 16 0 0016-16v-32a16 16 0 00-16-16h-128a16 16 0 00-16 16v32a16 16 0 0016 16zM240 415h192a16 16 0 0016-16v-32a16 16 0 00-16-16h-192a16 16 0 00-16 16v32a16 16 0 0016 16zM176 352h-48v-304a16 16 0 00-16-16h-32a16 16 0 00-16 16v304h-48c-14 0-21 17-11 27l80 96a16 16 0 0023 0l80-96c9-10 2-27-12-27z",
-      sortalfabetical:
-        "box:512;fill:#000;width:0;path:m176 352h-48v-304a16 16 0 00-16-16h-32a16 16 0 00-16 16v304h-48c-14 0-21 17-11 27l80 96a16 16 0 0022 0l80-96c10-10 3-27-11-27zm271-149-59-160a16 16 0 00-15-11h-42a16 16 0 00-15 11l-59 160a16 16 0 0015 21h25a16 16 0 0015-11l4-13h71l5 13a16 16 0 0015 11h25a16 16 0 0015-21zm-111-59 16-48 16 48z",
-      sortrgb:
-        "box:32;fill:#000;<circle cx='10' cy='12' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='22' cy='12' r='2'/><circle cx='23' cy='19' r='2'/>;path:m17 2a14 14 0 00-15 14 5 5 0 006 5l1 0a3 3 0 014 2v4a3 3 0 003 3 14 14 0 0014-15 14 14 0 00-13-13zm8 22a12 12 0 01-9 4 1 1 0 01-1-1v-4a5 5 0 00-5-5 5 5 0 00-1 0l-1 0a3 3 0 01-4-2 12 12 0 0112-12 12 12 0 0112 12 12 12 0 01-3 8z",
-      sortcontrast:
-        "box:240;fill:#000;path:m177 80-57-57-57 56c-31 31-31 82 0 113a80 80 90 0057 24c21 0 41-8 57-23 31-31 31-82 0-113zm-57 116c-16 0-31-6-42-18-12-11-18-26-18-42s6-31 18-42l42-43v145z",
-      sortuser1:
-        "box:32;path:m16 2a14 14 0 1014 14 14 14 0 00-14-14zm8 23v-1l0 0a5 5 0 00-5-5h-6a5 5 0 00-5 5c0 0 0 0 0 0v1a12 12 0 1116 0zm-8-18a5 5 0 105 5 5 5 0 00-5-5z",
-      eyedropper:
-        "box:32;fill:black;path:m2 27h3v3h-3zm27.7-19.7-5-5a1 1 0 00-1.4 0h0l-3.3 3.3-1.3-1.3-1.4 1.4 1.3 1.3-10.3 10.3a1 1 0 00-.3.7v1.6l-2.7 2.7a1 1 0 000 1.4h0l3 3a1 1 0 001.4 0h0l2.7-2.7h1.6a1 1 0 00.7-.3l10.3-10.3 1.3 1.3 1.4-1.4-1.3-1.3 3.3-3.3a1 1 0 000-1.4zm-16.1 14.7h-2l-2.6 2.6-1.6-1.6 2.6-2.6v-2l10-10 3.6 3.6zm11.4-11.4-3.6-3.6 2.6-2.6 3.6 3.6z",
-    }); // end define <svg-icon> adapted from https://iconmeister.github.io
+    // ------------------------------------------------------
+    sortindex:
+      "box:64;fill:#000;width:.01;path:m38 12h2v8h-2a2 2 90 00-2 2v4a2 2 90 002 2h12a2 2 90 002-2v-4a2 2 90 00-2-2h-2v-14a2 2 90 00-2-2h-6a2 2 90 00-2 2l-2 4a2 2 90 002 2m-15 32h-6v-38a2 2 90 00-2-2h-4a2 2 90 00-2 2v38h-6c-2 0-3 3-2 4l10 12a2 2 90 003 0l10-12c2-1 1-4-2-4z",
+    sortnamelength:
+      "box:512;fill:#000;width:.1;path:M240 96h64a16 16 0 0016-16v-32a16 16 0 00-16-16h-64a16 16 0 00-16 16v32a16 16 0 0016 16zM240 254h128a16 16 0 0016-16v-32a16 16 0 00-16-16h-128a16 16 0 00-16 16v32a16 16 0 0016 16zM240 415h192a16 16 0 0016-16v-32a16 16 0 00-16-16h-192a16 16 0 00-16 16v32a16 16 0 0016 16zM176 352h-48v-304a16 16 0 00-16-16h-32a16 16 0 00-16 16v304h-48c-14 0-21 17-11 27l80 96a16 16 0 0023 0l80-96c9-10 2-27-12-27z",
+    sortalfabetical:
+      "box:512;fill:#000;width:0;path:m176 352h-48v-304a16 16 0 00-16-16h-32a16 16 0 00-16 16v304h-48c-14 0-21 17-11 27l80 96a16 16 0 0022 0l80-96c10-10 3-27-11-27zm271-149-59-160a16 16 0 00-15-11h-42a16 16 0 00-15 11l-59 160a16 16 0 0015 21h25a16 16 0 0015-11l4-13h71l5 13a16 16 0 0015 11h25a16 16 0 0015-21zm-111-59 16-48 16 48z",
+    sortrgb:
+      "box:32;fill:#000;<circle cx='10' cy='12' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='22' cy='12' r='2'/><circle cx='23' cy='19' r='2'/>;path:m17 2a14 14 0 00-15 14 5 5 0 006 5l1 0a3 3 0 014 2v4a3 3 0 003 3 14 14 0 0014-15 14 14 0 00-13-13zm8 22a12 12 0 01-9 4 1 1 0 01-1-1v-4a5 5 0 00-5-5 5 5 0 00-1 0l-1 0a3 3 0 01-4-2 12 12 0 0112-12 12 12 0 0112 12 12 12 0 01-3 8z",
+    sortcontrast:
+      "box:240;fill:#000;path:m177 80-57-57-57 56c-31 31-31 82 0 113a80 80 90 0057 24c21 0 41-8 57-23 31-31 31-82 0-113zm-57 116c-16 0-31-6-42-18-12-11-18-26-18-42s6-31 18-42l42-43v145z",
+    sortuser1:
+      "box:32;path:m16 2a14 14 0 1014 14 14 14 0 00-14-14zm8 23v-1l0 0a5 5 0 00-5-5h-6a5 5 0 00-5 5c0 0 0 0 0 0v1a12 12 0 1116 0zm-8-18a5 5 0 105 5 5 5 0 00-5-5z",
+    eyedropper:
+      "box:32;fill:black;path:m2 27h3v3h-3zm27.7-19.7-5-5a1 1 0 00-1.4 0h0l-3.3 3.3-1.3-1.3-1.4 1.4 1.3 1.3-10.3 10.3a1 1 0 00-.3.7v1.6l-2.7 2.7a1 1 0 000 1.4h0l3 3a1 1 0 001.4 0h0l2.7-2.7h1.6a1 1 0 00.7-.3l10.3-10.3 1.3 1.3 1.4-1.4-1.3-1.3 3.3-3.3a1 1 0 000-1.4zm-16.1 14.7h-2l-2.6 2.6-1.6-1.6 2.6-2.6v-2l10-10 3.6 3.6zm11.4-11.4-3.6-3.6 2.6-2.6 3.6 3.6z",
+  }); // end define <svg-icon> adapted from https://iconmeister.github.io
 
   //end IIFE
 })();
@@ -1297,3 +1309,16 @@
 
 // Disadvantages
 // It is easy to dispatch too many unrequired events, or none existing eventNames
+
+customElements.whenDefined(customElements.get("my-parent")).then(() => {
+  customElements.define(
+    "my-child",
+    class extends HTMLElement {
+      constructor() {
+        super().attachShadow({
+          mode: "open",
+        }).innerHTML = `<style></style><h1>Child</h1>`;
+      }
+    }
+  );
+});
